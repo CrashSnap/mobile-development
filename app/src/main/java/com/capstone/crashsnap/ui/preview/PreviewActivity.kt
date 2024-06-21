@@ -1,0 +1,130 @@
+package com.capstone.crashsnap.ui.preview
+
+import android.content.Intent
+import android.net.Uri
+import android.os.Build
+import android.os.Bundle
+import android.util.Log
+import android.view.View
+import android.view.WindowInsets
+import android.view.WindowManager
+import android.widget.Toast
+import androidx.activity.viewModels
+import androidx.appcompat.app.AppCompatActivity
+import com.capstone.crashsnap.R
+import com.capstone.crashsnap.ViewModelFactory
+import com.capstone.crashsnap.data.NetResult
+import com.capstone.crashsnap.data.remote.response.Data
+import com.capstone.crashsnap.databinding.ActivityPreviewBinding
+import com.capstone.crashsnap.showAlertDialog
+import com.capstone.crashsnap.ui.auth.LoginActivity
+import com.capstone.crashsnap.ui.result.ResultActivity
+import com.capstone.crashsnap.uriToFile
+
+class PreviewActivity : AppCompatActivity() {
+    private lateinit var binding: ActivityPreviewBinding
+    private lateinit var imageUri: Uri
+
+    private val viewModel by viewModels<PreviewViewModel> {
+        ViewModelFactory.getInstance(this)
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        binding = ActivityPreviewBinding.inflate(layoutInflater)
+        super.onCreate(savedInstanceState)
+        setContentView(binding.root)
+        viewModel.getSession().observe(this) { user ->
+            if (!user.isLogin) {
+                startActivity(Intent(this, LoginActivity::class.java))
+                finish()
+            }
+        }
+
+        @Suppress("DEPRECATION")
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            window.insetsController?.hide(WindowInsets.Type.statusBars())
+        } else {
+            window.setFlags(
+                WindowManager.LayoutParams.FLAG_FULLSCREEN,
+                WindowManager.LayoutParams.FLAG_FULLSCREEN
+            )
+        }
+
+
+        imageUri = Uri.parse(intent.getStringExtra(EXTRA_IMAGE_STRING))
+        binding.previewImageView.setImageURI(imageUri)
+
+        binding.analyzeButton.setOnClickListener {
+            uploadImage()
+        }
+
+        binding.topAppBar.setNavigationOnClickListener {
+            onBackPressedDispatcher.onBackPressed()
+        }
+    }
+
+
+    private fun startResultActivity(classificationResult: Data?) {
+        val intent = Intent(this, ResultActivity::class.java).apply {
+            putExtra(ResultActivity.EXTRA_IMAGE_STRING, imageUri.toString())
+            putExtra(EXTRA_CLASSIFICATION_RESULT, classificationResult)
+        }
+        startActivity(intent)
+        finish()
+    }
+
+    private fun uploadImage() {
+        imageUri?.let { uri ->
+            val imageFile = uriToFile(uri, this)
+            Log.d("Classification File", "showImage: ${imageFile.path}")
+            showLoading(true)
+            val extraToken = intent.getStringExtra(EXTRA_TOKEN_PREVIEW).toString()
+            viewModel.getSession().observe(this) { user ->
+                var token = user.token
+                if (token == null) {
+                    token = extraToken
+                }
+                viewModel.uploadImage(token, imageFile).observe(this) { result ->
+                    if (result != null) {
+                        when (result) {
+                            is NetResult.Loading -> {
+                                showLoading(true)
+                            }
+
+                            is NetResult.Success -> {
+                                result.data.message?.let { showToast(it) }
+                                showLoading(false)
+                                startResultActivity(result.data.data)
+                            }
+
+                            is NetResult.Error -> {
+                                if (result.error == "401") {
+                                    showAlertDialog(this) {
+                                        viewModel.logout()
+                                    }
+                                } else {
+                                    showToast(result.error)
+                                }
+                                showLoading(false)
+                            }
+                        }
+                    }
+                }
+            }
+        } ?: showToast(getString(R.string.empty_history))
+    }
+
+    private fun showLoading(isLoading: Boolean) {
+        binding.progressBar.visibility = if (isLoading) View.VISIBLE else View.GONE
+    }
+
+    private fun showToast(message: String) {
+        Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+    }
+
+    companion object {
+        const val EXTRA_TOKEN_PREVIEW = "extra_token_preview"
+        const val EXTRA_IMAGE_STRING = "extra_image_string"
+        const val EXTRA_CLASSIFICATION_RESULT = "extra_classification_result"
+    }
+}
