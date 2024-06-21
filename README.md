@@ -1,5 +1,5 @@
 # mobile-development
-## 1. Feature
+## Feature
 - **Splash screen**: Here is an initial screen displaying the app's logo while it loads.
 - **Onboarding**: Here is a series of introductory screens guiding you through the app's features.
 - **Authentication**: Here is the process for verifying your identity via login or sign-up.
@@ -10,7 +10,7 @@
 - **Useful tips about car damage**: Here are some tips and advice on identifying and addressing car damage.
 - **Car damage detection history**: Here is a log of your previous car damage assessments conducted within the app.
 
-## 2. Dependencies
+## Dependencies
 - **TouchImageView**
   - Gradle:
     ```kotlin
@@ -188,3 +188,15 @@
     ```kotlin
     API_KEY = "YOUR_API_KEY_HERE"
     ```
+## Contribution
+
+If you want to contribute to this project, please create a pull request or open a new issue in this repository. Your contributions are greatly appreciated!
+
+## Authors
+
+- [Dheril Ismail Octavians](https://github.com/Snasset)
+- [Ahamd Shafwan Dzaky](https://github.com/AhmadShafwanDzaky)
+
+## License
+
+This project is licensed under the [MIT License](LICENSE).
